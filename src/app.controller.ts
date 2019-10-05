@@ -2,8 +2,8 @@ import {
   Controller,
   Post,
   Body,
-  Get,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { UsersService } from './users/users.service';
 import { User } from './dtos';
@@ -18,7 +18,7 @@ export class AppController {
     try {
       user = await this._UsersService.login(user.username, user.password);
     } catch (e) {
-      throw new BadRequestException(e.message);
+      throw new UnauthorizedException(e.message);
     }
     return user;
   }
@@ -32,11 +32,5 @@ export class AppController {
       throw new BadRequestException(e.message);
     }
     return user;
-  }
-
-  // GET ALL USERS //
-  @Get('users')
-  async getAllUsers() {
-    return await this._UsersService.getAllUsers();
   }
 }
