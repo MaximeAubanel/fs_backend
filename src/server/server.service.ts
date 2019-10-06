@@ -177,6 +177,7 @@ export class ServerService {
     this._AppServer.rooms.forEach(async room => {
       if (room.name === roomName) {
         room.map = new Array(GRID_SIZE).fill(0).map(() => new Array(GRID_SIZE).fill(0));
+        this.server.to(room.name).emit("GAME__CLEAN_MAP")
         if (room.engineTicker !== null)
           return console.warn('Game already in progress, ignoring...');
         room.users.forEach(user => {

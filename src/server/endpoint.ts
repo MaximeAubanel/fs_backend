@@ -1,0 +1,25 @@
+export const enum SERVER_ENDPOINT {
+    // Global
+    LOGIN = "LOGIN",
+    MESSAGE_SERVER = "MESSAGE_SERVER",
+
+    // Room
+    JOIN_ROOM = "JOIN_ROOM",
+    LEAVE_ROOM = "LEAVE_ROOM",
+    MESSAGE_ROOM = "MESSAGE_ROOM",
+
+    // Game
+    TOGGLE_READY = "TOGGLE_READY",
+    UPDATE_DIR = "UPDATE_DIR"
+}
+
+export const enum CLIENT_ENDPOINT {
+    // Global
+    MESSAGE_SERVER = "MESSAGE_SERVER",
+    UPDATE_ROOMS = "ROOMS_UPDATE",
+
+    // Room
+    UPDATE_ROOM = "UPDATE_ROOM",
+    UPDATE_GAME = "UPDATE_GAME",
+    MESSAGE = "MESSAGE"
+}
