@@ -1,11 +1,17 @@
 import { Socket } from 'socket.io';
 
-export default class User {
+export const enum STATUS {
+    IDLE = "IDLE",
+    READY = "READY",
+    PLAYING = "PLAYING"
+}
+
+export class ServerUser {
     username: string;
     socket: Socket;
 
+    status: STATUS;
     roomId: number;
-    isReady: boolean;
     dir_X: number;
     dir_Y: number;
     x: number;
@@ -15,8 +21,8 @@ export default class User {
         this.username = username;
         this.socket = socket;
 
+        this.status = STATUS.IDLE;
         this.roomId = roomId;
-        this.isReady = false;
         this.dir_X = null;
         this.dir_Y = null;
         this.x = null;

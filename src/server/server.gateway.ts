@@ -1,8 +1,6 @@
 import {
   SubscribeMessage,
   WebSocketGateway,
-  WsResponse,
-  OnGatewayConnection,
   OnGatewayDisconnect,
   WebSocketServer,
   OnGatewayInit,
@@ -19,14 +17,15 @@ export class ServerGateway implements OnGatewayDisconnect, OnGatewayInit {
     await this._ServerService.init(this.server);
   }
 
+  /////////////
   // GENERAL //
+  /////////////
   @SubscribeMessage('LOGIN_REQUEST')
   async login(socket: Socket, user: User) {
     await this._ServerService.login(socket, user);
   }
   async handleDisconnect(socket: Socket) {
     await this._ServerService.logout(socket);
-    await this._ServerService.update();
   }
 
   @SubscribeMessage('JOIN_ROOM_REQUEST')
@@ -38,18 +37,17 @@ export class ServerGateway implements OnGatewayDisconnect, OnGatewayInit {
     await this._ServerService.leaveRoom(socket, room);
   }
 
-  // ROOM //
+  /////////////
+  /// ROOM ////
+  /////////////
   @SubscribeMessage('MESSAGE')
   async Message(socket: Socket, message: MessageFromClient) {
     await this._ServerService.message(socket, message);
   }
-
   @SubscribeMessage('GAME__TOGGLE_READY')
   async Game__ToggleReady(socket: Socket, data: ToggleReadyFromClient) {
     await this._ServerService.Game__ToggleReady(socket, data);
-    await this._ServerService.update();
   }
-
   @SubscribeMessage('GAME__DIR_UPDATE')
   async Game__DirUpdate(socket: Socket, data: GameDirUpdateFromClient) {
     await this._ServerService.Game__DirUpdate(socket, data);

@@ -1,13 +1,12 @@
-import User from "./user"
+import { ServerUser as User, STATUS as USER_STATUS } from "./user"
 import { Server } from 'socket.io';
 import { CLIENT_ENDPOINT } from "../endpoint"
 
 const MAP_SIZE = 100
 
 enum STATUS {
-    IDLE,
-    PLAYING,
-    GAME_OVER
+    IDLE = "IDLE",
+    PLAYING = "PLAYING"
 }
 
 export class Room {
@@ -44,7 +43,7 @@ export class Room {
     public leave(user: User): boolean {
         try {
             this.users = this.users.filter(tmpUser => (
-                tmpUser.socket.id !== user.socket.id)
+                tmpUser.username !== user.username)
             );
             console.log("[ " + user.username +" ] left the room")
             return true;
@@ -64,10 +63,11 @@ export class Room {
             return console.warn('Game already in progress, ignoring...');
         }
 
-        this.resetGame();
+        this.resetMap();
         this.status = STATUS.PLAYING;
         
         this.users.forEach(tmpUser => {
+            tmpUser.status = USER_STATUS.PLAYING
             while (
                 !this.updatePlayerPos(tmpUser, this.randInRange(0, MAP_SIZE), this.randInRange(0, MAP_SIZE))
             ) {}
@@ -83,9 +83,18 @@ export class Room {
         this.status = STATUS.IDLE;
     }
 
+    private checkEndGame() {
+        this.users.forEach(user => {
+            if (user.status === USER_STATUS.PLAYING) {
+                return;
+            }
+        })
+        this.status = STATUS.IDLE;
+    }
+
     private tick() {
-        // TODO ADD CHECK END
-        if (this.status === STATUS.GAME_OVER) {
+        this.checkEndGame();
+        if (this.status === STATUS.IDLE) {
           this.stopGame();
         }
     
@@ -96,22 +105,57 @@ export class Room {
               y : user.y,
               gameId: user.roomId
           })
-          this.updatePlayerPos(user, user.x + user.dir_X, user.y + user.dir_Y)
+          if(!this.updatePlayerPos(user, user.x + user.dir_X, user.y + user.dir_Y)) {
+            user.status = USER_STATUS.IDLE
+          }
         })
         this.sendDataToAll(CLIENT_ENDPOINT.UPDATE_GAME, myObject)
       }
 
     public toggleReady(user: User, isReady: boolean): void {
         this.users.forEach(tmpUser => {
-            if (tmpUser.socket.id === user.socket.id) {
-                tmpUser.isReady = isReady;
+            if (tmpUser.username === user.username) {
+                tmpUser.status = USER_STATUS.READY;
             }
+        })
+    }
+
+    public checkStartGame(): void {
+        if (this.isRoomReadyToPlay()) {
+            this.startGame()
+        }
+    }
+
+    public async updateDirection(_user: User, key: number): Promise<void> {
+        this.users.forEach(user => {
+          if (_user.username === user.username) {
+            // left arrow key
+            if (key === 37 && user.dir_X === 0) {
+              user.dir_X = -1;
+              user.dir_Y = 0;
+            }
+            // up arrow key
+            else if (key === 38 && user.dir_Y === 0) {
+              user.dir_Y = -1;
+              user.dir_X = 0;
+            }
+            // right arrow key
+            else if (key === 39 && user.dir_X === 0) {
+              user.dir_X = 1;
+              user.dir_Y = 0;
+            }
+            // down arrow key
+            else if (key === 40 && user.dir_Y === 0) {
+              user.dir_Y = 1;
+              user.dir_X = 0;
+            }
+          }
         })
     }
 
     private isRoomReadyToPlay(): boolean {
         this.users.forEach(user => {
-            if (!user.isReady) return false;
+            if (user.status !== USER_STATUS.READY) return false;
         })
         if (this.users.length < 2) return false;
         return true;
@@ -132,7 +176,7 @@ export class Room {
         return true;
     }
 
-    public resetGame() {
+    public resetMap() {
         this.map = new Array(MAP_SIZE).fill(0).map(() => new Array(MAP_SIZE).fill(0));
     }
 
@@ -159,20 +203,31 @@ export class Room {
     /// UTILS ///
     /////////////
 
+    public isUserInTheRoom(_user: User): boolean {
+        this.users.forEach(user => {
+           if (_user.username === user.username) return true
+        })
+        return false;
+    }
+
     private getUsers(): any[] {
         var users = []
         this.users.forEach(user => {
             users.push({
                 username: user.username,
                 roomId: user.roomId,
-                isReady: user.isReady
+                status: user.status
             })
         })
         return users;
     }
 
+    public isEmpty(): boolean {
+        return this.users.length === 0
+    }
+
     private randInRange(min: number, max: number) {
         // min and max included
         return Math.floor(Math.random() * (max - min + 1) + min);
-      }
+    }
 }
