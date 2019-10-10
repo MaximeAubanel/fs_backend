@@ -30,6 +30,7 @@ export class Room {
 
     public join(user: User): boolean {
         try {
+            user.id = this.users.length + 1;
             this.users.push(user);
             console.log("[ " + user.username +" ] joined the room")
             
@@ -82,6 +83,7 @@ export class Room {
             tmpUser.dir_X = Math.round(Math.random()) * 2 - 1;
             tmpUser.dir_Y = 0;
         })
+        this.updateRoomState();
         this.engineTicker = <any>setInterval(() => this.tick(), 100);
     }
 
@@ -92,12 +94,17 @@ export class Room {
     }
 
     private checkEndGame() {
-        this.users.forEach(user => {
+        var nbInGame = this.users.length
+        var nbStillPlaying = 0
+
+        for (var user of this.users) {
             if (user.status === USER_STATUS.PLAYING) {
-                return;
+                nbStillPlaying = nbStillPlaying + 1;
             }
-        })
-        this.status = STATUS.IDLE;
+        }
+        if (nbStillPlaying < 2) {
+            this.status = STATUS.IDLE;
+        }
     }
 
     private tick() {
@@ -172,7 +179,6 @@ export class Room {
         }
 
         if (this.users.length < 2) return false;
-        console.log("playing")
         return true;
     }
 
