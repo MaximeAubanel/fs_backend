@@ -4,6 +4,8 @@ import { UsersService } from '../users/users.service';
 import { Socket, Server } from 'socket.io';
 import { ServerUser, STATUS as USER_STATUS } from "./component/user"
 import { Room } from "./component/room"
+import { CLIENT_ENDPOINT } from './endpoint';
+import { objectExpression } from '@babel/types';
 
 class AppServer {
   users: ServerUser[] = [];
@@ -19,7 +21,7 @@ export class ServerService {
 
   async init(server: Server) { this.server = server; }
 
-  async login(socket: Socket, user: User): Promise<void> {
+  async login(socket: Socket, user: any): Promise<void> {
     try {
       user = await this._UsersService.loginWithToken(
         user.username,
@@ -31,7 +33,7 @@ export class ServerService {
         username: user.username,
         socket: socket,
 
-        roomId: 0,
+        id: 0,
         status: USER_STATUS.IDLE,
         dir_X: 1,
         dir_Y: 0,
@@ -39,6 +41,7 @@ export class ServerService {
         y: 0,
       };
       this._AppServer.users.push(newUser);
+      this.updateUserAboutRooms(socket)
     } catch (e) {
       console.log(e.message);
     }
@@ -49,6 +52,15 @@ export class ServerService {
     if (user === undefined) return;
 
     await this.removeUserFromAll(user);
+    console.log("Online User: " + this._AppServer.users.length)
+    console.log("Room Availble: " + this._AppServer.rooms.length)
+  }
+
+  async messageServer(socket: Socket, message: string): Promise<void> {
+    var user: ServerUser = await this.getUserFromSocket(socket);
+    if (user === undefined) return;
+
+    this.server.emit(CLIENT_ENDPOINT.MESSAGE_SERVER, user.username + ": " + message)
   }
 
   /////////////////
@@ -59,8 +71,9 @@ export class ServerService {
     var user: ServerUser = await this.getUserFromSocket(socket);
     if (user === undefined) return;
 
-    var room = await this.getRoom(roomName)
+    var room = await this.getRoomCreate(roomName)
     room.join(user);
+    this.updateAllUserAboutRooms()
   }
 
   async leaveRoom(socket: Socket, roomName: string): Promise<void> {
@@ -68,14 +81,19 @@ export class ServerService {
     if (user === undefined) return;
 
     var room = await this.getRoom(roomName)
+    if (room === null || !room.isUserInTheRoom(user)) return;
+
     room.leave(user);
   }
 
-  async message(socket: Socket, message: string): Promise<void> {
+  async message(socket: Socket, roomName: string, message: string): Promise<void> {
     var user: ServerUser = await this.getUserFromSocket(socket);
     if (user === undefined) return;
+   
+    var room: Room = await this.getRoom(roomName);
+    if (room === null || !room.isUserInTheRoom(user)) return;
 
-    // TODO -> Message to all server
+    room.message(user.username + ": " + message)
   }
 
   /////////////////
@@ -111,7 +129,28 @@ export class ServerService {
   ///// UTILS /////
   /////////////////
 
-  private async getRoom(roomName: string): Promise<Room> {
+  private async updateUserAboutRooms(socket: Socket): Promise<void> {
+    socket.emit(CLIENT_ENDPOINT.UPDATE_ROOMS, await this.getRoomsInfo())
+  }
+
+  private async updateAllUserAboutRooms(): Promise<void> {
+    this.server.emit(CLIENT_ENDPOINT.UPDATE_ROOMS, await this.getRoomsInfo())
+  }
+
+  private async getRoomsInfo(): Promise<any> {
+    var data = []
+
+    console.log(this._AppServer.rooms.length)
+    for (var room of this._AppServer.rooms) {
+      data.push({
+        name: room.name,
+        userNb: room.getUsersNb()
+      })
+    }
+    return data
+  }
+
+  private async getRoomCreate(roomName: string): Promise<Room> {
     for (var room of this._AppServer.rooms) {
       if (room.name === roomName) {
         return room
@@ -122,6 +161,15 @@ export class ServerService {
     return newRoom
   }
 
+  private async getRoom(roomName: string): Promise<Room> {
+    for (var room of this._AppServer.rooms) {
+      if (room.name === roomName) {
+        return room
+      }
+    }
+    return null
+  }
+
   private async getUserFromSocket(socket: Socket): Promise<ServerUser> {
     return this._AppServer.users.find(user => user.socket.id === socket.id);
   }
@@ -130,12 +178,21 @@ export class ServerService {
     this._AppServer.rooms.forEach(room => {
       if (room.isUserInTheRoom(user)) {
         room.leave(user)
-        this._AppServer.users = this._AppServer.users.filter(tmpUser => (
-          tmpUser.username !== user.username)
-        );
-        return
       }
     })
-  }
 
+    // Remove player from global user list
+    this._AppServer.users = this._AppServer.users.filter(tmpUser => (
+      tmpUser.username !== user.username)
+    );
+
+    // Delete empty rooms
+    var tmpNb = this._AppServer.rooms.length
+    this._AppServer.rooms = this._AppServer.rooms.filter(tmpRoom => (
+      tmpRoom.getUsersNb() !== 0)
+    );
+    if (tmpNb !== this._AppServer.rooms.length) {
+      this.updateAllUserAboutRooms()
+    }
+  }
 }

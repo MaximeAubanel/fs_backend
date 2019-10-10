@@ -16,7 +16,7 @@ export const enum SERVER_ENDPOINT {
 export const enum CLIENT_ENDPOINT {
     // Global
     MESSAGE_SERVER = "MESSAGE_SERVER",
-    UPDATE_ROOMS = "ROOMS_UPDATE",
+    UPDATE_ROOMS = "UPDATE_ROOMS",
 
     // Room
     UPDATE_ROOM = "UPDATE_ROOM",

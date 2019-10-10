@@ -32,6 +32,10 @@ export class Room {
         try {
             this.users.push(user);
             console.log("[ " + user.username +" ] joined the room")
+            
+            user.socket.join(this.name, () => { 
+                this.updateRoomState()
+             })
             return true
         } catch (e) {
             console.warn("[ " + user.username +" ] failed to join the room")
@@ -46,6 +50,10 @@ export class Room {
                 tmpUser.username !== user.username)
             );
             console.log("[ " + user.username +" ] left the room")
+            
+            user.socket.leave(this.name, () => { 
+                this.updateRoomState()
+             })
             return true;
         } catch (e) {
             console.warn("[ " + user.username +" ] failed to leave the room")
@@ -103,7 +111,7 @@ export class Room {
           myObject.push({
               x : user.x,
               y : user.y,
-              gameId: user.roomId
+              gameId: user.id
           })
           if(!this.updatePlayerPos(user, user.x + user.dir_X, user.y + user.dir_Y)) {
             user.status = USER_STATUS.IDLE
@@ -115,9 +123,14 @@ export class Room {
     public toggleReady(user: User, isReady: boolean): void {
         this.users.forEach(tmpUser => {
             if (tmpUser.username === user.username) {
-                tmpUser.status = USER_STATUS.READY;
+                if (isReady === true) {
+                    tmpUser.status = USER_STATUS.READY;
+                } else {
+                    tmpUser.status = USER_STATUS.IDLE;
+                }
             }
         })
+        this.updateRoomState();
     }
 
     public checkStartGame(): void {
@@ -154,10 +167,12 @@ export class Room {
     }
 
     private isRoomReadyToPlay(): boolean {
-        this.users.forEach(user => {
+        for (var user of this.users) {
             if (user.status !== USER_STATUS.READY) return false;
-        })
+        }
+
         if (this.users.length < 2) return false;
+        console.log("playing")
         return true;
     }
 
@@ -170,7 +185,7 @@ export class Room {
           this.map[y][x] !== 0
         )
           return false;
-        this.map[y][x] = user.roomId;
+        this.map[y][x] = user.id;
         user.x = x;
         user.y = y;
         return true;
@@ -204,9 +219,9 @@ export class Room {
     /////////////
 
     public isUserInTheRoom(_user: User): boolean {
-        this.users.forEach(user => {
-           if (_user.username === user.username) return true
-        })
+        for (var user of this.users) {
+            if (_user.username === user.username) return true
+        }
         return false;
     }
 
@@ -215,11 +230,15 @@ export class Room {
         this.users.forEach(user => {
             users.push({
                 username: user.username,
-                roomId: user.roomId,
+                id: user.id,
                 status: user.status
             })
         })
         return users;
+    }
+
+    public getUsersNb(): number {
+        return this.users.length
     }
 
     public isEmpty(): boolean {

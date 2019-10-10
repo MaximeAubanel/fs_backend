@@ -11,18 +11,18 @@ export class ServerUser {
     socket: Socket;
 
     status: STATUS;
-    roomId: number;
+    id: number;
     dir_X: number;
     dir_Y: number;
     x: number;
     y: number;
 
-    constructor(username: string, socket: Socket, roomId: number) {
+    constructor(username: string, socket: Socket, id: number) {
         this.username = username;
         this.socket = socket;
 
         this.status = STATUS.IDLE;
-        this.roomId = roomId;
+        this.id = id;
         this.dir_X = null;
         this.dir_Y = null;
         this.x = null;
