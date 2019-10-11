@@ -94,7 +94,6 @@ export class Room {
     }
 
     private checkEndGame() {
-        var nbInGame = this.users.length
         var nbStillPlaying = 0
 
         for (var user of this.users) {
